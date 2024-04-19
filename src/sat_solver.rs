@@ -1,103 +1,93 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::{collections::HashMap, hash::Hash};
 
-use crate::dimacs;
 use crate::sat_solver_core;
 
-#[derive(Debug, Clone)]
-pub struct Literal {
-  pub name: String,
+#[derive(Clone, Debug)]
+pub struct Variable<TName> {
+  pub name: TName,
   pub sign: bool,
 }
 
-pub type Variable = Literal;
-
-impl Literal {
-  pub fn new(name: &str) -> Literal {
-    Literal {
-      name: name.to_string(),
+impl<TName: Clone> Variable<TName> {
+  pub fn new(name: &TName) -> Self {
+    Self {
+      name: name.clone(),
       sign: true,
     }
   }
 
-  pub fn not(&self) -> Literal {
-    Literal {
+  pub fn not(&self) -> Self {
+    Self {
       name: self.name.clone(),
       sign: !self.sign,
     }
   }
 }
 
-#[derive(Debug)]
-pub struct SATSolver {
-  pub num_variables: usize,
-  pub clauses: Vec<Vec<i32>>,
-  pub variable_to_id: HashMap<String, usize>,
-  pub id_to_variable: HashMap<usize, String>,
+impl From<&str> for Variable<String> {
+  fn from(name: &str) -> Self {
+    Self {
+      name: String::from(name),
+      sign: true,
+    }
+  }
 }
 
-impl SATSolver {
-  pub fn new() -> SATSolver {
+pub struct SATSolver<TName> {
+  num_variables: usize,
+  clauses: Vec<Vec<i32>>,
+  name_to_id: HashMap<TName, i32>,
+  id_to_name: HashMap<i32, TName>,
+}
+
+impl<TName: Clone + Eq + Hash> SATSolver<TName> {
+  pub fn new() -> SATSolver<TName> {
     SATSolver {
       num_variables: 0,
       clauses: vec![],
-      variable_to_id: HashMap::new(),
-      id_to_variable: HashMap::new(),
+      name_to_id: HashMap::new(),
+      id_to_name: HashMap::new(),
     }
   }
 
-  pub fn solve(&self) -> Option<HashMap<String, bool>> {
-    let result = match sat_solver_core::solve(self.num_variables, &self.clauses) {
-      Some(result) => result,
-      None => return None,
-    };
+  pub fn solve(&self) -> Option<HashMap<TName, bool>> {
+    match sat_solver_core::solve(self.num_variables, &self.clauses) {
+      Some(res) => Some(
+        res
+          .iter()
+          .map(|e| (self.id_to_name.get(&e.abs()).unwrap().clone(), *e > 0))
+          .collect(),
+      ),
+      None => None,
+    }
+  }
 
-    let mut model: HashMap<String, bool> = HashMap::new();
+  pub fn clear(&mut self) {
+    *self = Self::new();
+  }
 
-    for e in result.iter() {
-      let key = self
-        .id_to_variable
-        .get(&(e.abs() as usize))
-        .unwrap()
-        .clone();
-      let value = *e > 0;
-      model.insert(key, value);
+  pub fn add_variable(&mut self, variable: &Variable<TName>) {
+    if self.name_to_id.contains_key(&variable.name) {
+      return;
     }
 
-    Some(model)
-  }
-
-  pub fn solve_dimacs(&mut self, dimacs: &dimacs::DIMACS) -> Option<HashSet<i32>> {
-    self.num_variables = dimacs.num_variables;
-    self.clauses = dimacs.clauses.clone();
-    sat_solver_core::solve(self.num_variables, &self.clauses)
-  }
-
-  pub fn add_variable(&mut self, variable: &Literal) {
     self
-      .variable_to_id
-      .insert(variable.name.clone(), self.num_variables + 1);
+      .name_to_id
+      .insert(variable.name.clone(), self.num_variables as i32 + 1);
     self
-      .id_to_variable
-      .insert(self.num_variables + 1, variable.name.clone());
+      .id_to_name
+      .insert(self.num_variables as i32 + 1, variable.name.clone());
     self.num_variables += 1;
   }
 
-  pub fn add_clause(&mut self, clause: &[&Literal]) -> bool {
-    let mut tmp: Vec<i32> = vec![];
+  pub fn add_clause(&mut self, clause: &[&Variable<TName>]) {
+    let clause = clause
+      .iter()
+      .map(|literal| {
+        (if literal.sign { 1 } else { -1 }) * self.name_to_id.get(&literal.name).unwrap().clone()
+      })
+      .collect();
 
-    for e in clause.iter() {
-      let literal = if e.sign { 1 } else { -1 }
-        * match self.variable_to_id.get(&e.name) {
-          Some(result) => *result as i32,
-          None => return false,
-        };
-
-      tmp.push(literal);
-    }
-
-    self.clauses.push(tmp);
-
-    true
+    self.clauses.push(clause);
   }
 }

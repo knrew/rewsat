@@ -1,44 +1,41 @@
 use std::collections::HashSet;
 
-pub fn solve(num_variables: usize, clauses: &Vec<Vec<i32>>) -> Option<HashSet<i32>> {
-  let num_variables = num_variables;
-  let mut clauses = clauses.clone();
-
+pub fn solve(num_variables: usize, clauses: &[Vec<i32>]) -> Option<HashSet<i32>> {
+  let mut clauses = Vec::from(clauses);
   let mut model = HashSet::new();
-  let mut unassigned_variables = HashSet::new();
 
-  for i in 1..num_variables as i32 + 1 {
-    unassigned_variables.insert(i);
-  }
+  let mut unassigned_variables = HashSet::from_iter(1..=num_variables as i32);
 
-  if !simpify(&mut clauses, &mut model) {
-    return None;
-  }
+  // if !simpify(&mut clauses, &mut model) {
+  //   return None;
+  // }
 
-  for l in model.iter() {
-    unassigned_variables.insert(l.abs());
-  }
+  // model.iter().for_each(|literal| {
+  //   unassigned_variables.remove(&literal.abs());
+  // });
 
-  if !solve_impl(
+  let result = solve_impl(
     num_variables,
     &clauses,
     &mut model,
     &mut unassigned_variables,
-  ) {
-    return None;
-  }
+  );
 
-  Some(model)
+  if result {
+    Some(model)
+  } else {
+    None
+  }
 }
 
 fn solve_impl(
   num_variables: usize,
-  clauses: &Vec<Vec<i32>>,
+  clauses: &[Vec<i32>],
   model: &mut HashSet<i32>,
   unassigned_variables: &mut HashSet<i32>,
 ) -> bool {
   for clause in clauses.iter() {
-    if exists_constant_false_clause(clause, model) {
+    if exists_constant_false_clause(&model, &clause) {
       return false;
     }
   }
@@ -47,13 +44,16 @@ fn solve_impl(
     return true;
   }
 
-  let variable = select_variable(unassigned_variables);
+  assert!(!unassigned_variables.is_empty());
+  let variable = unassigned_variables.iter().nth(0).unwrap().clone();
   unassigned_variables.remove(&variable);
 
-  for sign in [1, -1] {
+  for sign in [-1, 1] {
     model.insert(sign * variable);
 
-    if solve_impl(num_variables, clauses, model, unassigned_variables) {
+    let result = solve_impl(num_variables, clauses, model, unassigned_variables);
+
+    if result {
       return true;
     }
 
@@ -62,7 +62,7 @@ fn solve_impl(
 
   unassigned_variables.insert(variable);
 
-  return false;
+  false
 }
 
 fn simpify(clauses: &mut Vec<Vec<i32>>, model: &mut HashSet<i32>) -> bool {
@@ -74,29 +74,28 @@ fn simpify(clauses: &mut Vec<Vec<i32>>, model: &mut HashSet<i32>) -> bool {
         if model.contains(&-clause[0]) {
           return false;
         }
-
         model.insert(clause[0]);
       }
     }
 
-    if model.len() == model_size {
+    if model_size == model.len() {
       break;
     }
 
-    for (i, clause) in clauses.iter_mut().enumerate() {
-      let mut index = 0;
-      while index < clause.len() {
-        if model.contains(&clause[index]) {
+    for (clause_index, clause) in clauses.iter_mut().enumerate() {
+      let mut literal_index = 0;
+      while literal_index < clause.len() {
+        if model.contains(&clause[literal_index]) {
           clause.clear();
           break;
         }
 
-        if model.contains(&-clause[index]) {
-          clause.remove(i);
+        if model.contains(&-clause[literal_index]) {
+          clause.remove(clause_index);
           continue;
         }
 
-        index += 1;
+        literal_index += 1;
       }
     }
   }
@@ -107,16 +106,15 @@ fn simpify(clauses: &mut Vec<Vec<i32>>, model: &mut HashSet<i32>) -> bool {
       clauses.remove(index);
       continue;
     }
-
     index += 1;
   }
 
-  return true;
+  true
 }
 
-fn exists_constant_false_clause(clause: &Vec<i32>, model: &HashSet<i32>) -> bool {
+fn exists_constant_false_clause(model: &HashSet<i32>, clause: &[i32]) -> bool {
   for literal in clause.iter() {
-    if !model.contains(literal) && !model.contains(&-literal) {
+    if !model.contains(&literal) && !model.contains(&-literal) {
       return false;
     }
 
@@ -125,12 +123,5 @@ fn exists_constant_false_clause(clause: &Vec<i32>, model: &HashSet<i32>) -> bool
     }
   }
 
-  return true;
-}
-
-fn select_variable(variables: &HashSet<i32>) -> i32 {
-  for n in variables.iter() {
-    return *n;
-  }
-  return 0;
+  true
 }
