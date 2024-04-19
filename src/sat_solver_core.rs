@@ -153,7 +153,7 @@ fn test_simplify1() {
   assert!(result);
   assert!(clauses.is_empty());
   assert!(model.contains(&1));
-  assert!(model.contains(&2) && model.contains(&-2));
+  assert!(!model.contains(&2) && !model.contains(&-2));
 }
 
 #[test]

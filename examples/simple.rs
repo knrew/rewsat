@@ -15,11 +15,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   variables.iter().for_each(|v| solver.add_variable(v));
 
-  solver.add_clause(&[&a, &b.not()]); // a || !b
-  solver.add_clause(&[&a, &c, &d.not()]); // a || c || !d
-  solver.add_clause(&[&c.not(), &e.not()]); // !c || !e
-  solver.add_clause(&[&c.not(), &e]); // !c || e
-  solver.add_clause(&[&c, &d]); //c || d
+  // (a || !b) && (a || c || !d) && (!c || !e) && (!c || e) && (c || d)
+  solver.add_clause(&[&a, &b.not()]);
+  solver.add_clause(&[&a, &c, &d.not()]);
+  solver.add_clause(&[&c.not(), &e.not()]);
+  solver.add_clause(&[&c.not(), &e]);
+  solver.add_clause(&[&c, &d]);
 
   match solver.solve() {
     Some(model) => {

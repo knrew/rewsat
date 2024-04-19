@@ -11,14 +11,14 @@ pub fn solve_dimacs<P: AsRef<Path>>(
 
 // return: (num_variables, clauses)
 fn parse_dimacs<P: AsRef<Path>>(dimacs_file: P) -> Result<(usize, Vec<Vec<i32>>), Box<dyn Error>> {
-  let lines = utilities::read_file(dimacs_file)?;
-
   let mut has_set_num_variables = false;
   let mut num_variables = 0;
   let mut num_clauses = 0;
   let mut clauses = vec![];
 
-  for line in lines.iter() {
+  let lines = utilities::read_file(dimacs_file)?;
+  
+    for line in lines.iter() {
     let words = line
       .split_whitespace()
       .map(|s| s.trim())
@@ -72,7 +72,7 @@ pub struct DimacsParseError;
 
 impl fmt::Display for DimacsParseError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "DimacsParseError")
+    write!(f, "{}", self)
   }
 }
 
