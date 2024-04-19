@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, path::PathBuf};
 
 use rewsat::dimacs_solver::solve_dimacs;
 
@@ -12,8 +12,15 @@ fn main() {
     return;
   }
 
-  let dimacs_file = args[1].clone();
-  println!("dimacs file: {}", dimacs_file);
+  let dimacs_file = match PathBuf::from(&args[1]).canonicalize() {
+    Ok(res) => res,
+    Err(e) => {
+      eprintln!("Error: {}", e);
+      return;
+    }
+  };
+
+  println!("dimacs file: {}", dimacs_file.to_string_lossy());
 
   match solve_dimacs(&dimacs_file) {
     Ok(result) => match result {

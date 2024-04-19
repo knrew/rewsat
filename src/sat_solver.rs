@@ -4,8 +4,8 @@ use crate::sat_solver_core;
 
 #[derive(Clone, Debug)]
 pub struct Variable<TName> {
-  pub name: TName,
-  pub sign: bool,
+  name: TName,
+  sign: bool,
 }
 
 impl<TName: Clone> Variable<TName> {
@@ -21,6 +21,14 @@ impl<TName: Clone> Variable<TName> {
       name: self.name.clone(),
       sign: !self.sign,
     }
+  }
+
+  pub fn name(&self) -> &TName {
+    &self.name
+  }
+
+  pub fn sign(&self) -> bool {
+    self.sign
   }
 }
 

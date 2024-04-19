@@ -15,22 +15,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   variables.iter().for_each(|v| solver.add_variable(v));
 
-  solver.add_clause(&[&a, &b.not()]);
-  solver.add_clause(&[&a, &c, &d.not()]);
-  solver.add_clause(&[&c.not(), &e.not()]);
-  solver.add_clause(&[&c.not(), &e.not()]);
-  solver.add_clause(&[&c, &d]);
+  solver.add_clause(&[&a, &b.not()]); // a || !b
+  solver.add_clause(&[&a, &c, &d.not()]); // a || c || !d
+  solver.add_clause(&[&c.not(), &e.not()]); // !c || !e
+  solver.add_clause(&[&c.not(), &e]); // !c || e
+  solver.add_clause(&[&c, &d]); //c || d
 
   match solver.solve() {
     Some(model) => {
       println!("SAT");
       variables
         .iter()
-        .for_each(|v| println!("{}: {}", v.name, model.get(&v.name).unwrap()));
+        .for_each(|v| println!("{}: {}", v.name(), model.get(v.name()).unwrap()));
     }
-    None => {
-      println!("UNSAT");
-    }
+    None => println!("UNSAT"),
   }
 
   Ok(())

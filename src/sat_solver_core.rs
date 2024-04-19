@@ -1,39 +1,53 @@
 use std::collections::HashSet;
 
 pub fn solve(num_variables: usize, clauses: &[Vec<i32>]) -> Option<HashSet<i32>> {
-  let mut clauses = Vec::from(clauses);
-  let mut model = HashSet::new();
-
-  let mut unassigned_variables = HashSet::from_iter(1..=num_variables as i32);
-
-  // if !simpify(&mut clauses, &mut model) {
+  // let mut clauses = Vec::from(clauses);
+  // let mut model = HashSet::new();
+  // if !simplify(&mut clauses, &mut model) {
   //   return None;
   // }
+  // if solve_with_recursive(num_variables, &clauses, &mut model) {
+  //   Some(model)
+  // } else {
+  //   None
+  // }
 
-  // model.iter().for_each(|literal| {
-  //   unassigned_variables.remove(&literal.abs());
-  // });
-
-  let result = solve_impl(
-    num_variables,
-    &clauses,
-    &mut model,
-    &mut unassigned_variables,
-  );
-
-  if result {
-    Some(model)
-  } else {
-    None
-  }
+  solve_norecursive(num_variables, &clauses)
 }
 
-fn solve_impl(
-  num_variables: usize,
-  clauses: &[Vec<i32>],
-  model: &mut HashSet<i32>,
-  unassigned_variables: &mut HashSet<i32>,
-) -> bool {
+#[allow(dead_code)]
+fn solve_norecursive(num_variables: usize, clauses: &[Vec<i32>]) -> Option<HashSet<i32>> {
+  let mut stack = Vec::from(vec![(HashSet::new(), Vec::from(clauses))]);
+
+  while !stack.is_empty() {
+    let (mut model, mut clauses) = stack.pop().unwrap();
+
+    if !simplify(&mut clauses, &mut model) {
+      continue;
+    }
+
+    if exists_constant_false_clauses(&model, &clauses) {
+      continue;
+    }
+
+    if model.len() == num_variables {
+      return Some(model);
+    }
+
+    let variable = select_variable(num_variables, &model);
+
+    for sign in [-1, 1] {
+      let mut model = model.clone();
+      model.insert(sign * variable);
+      stack.push((model, clauses.clone()));
+    }
+  }
+
+  None
+}
+
+#[allow(dead_code)]
+fn solve_recursive(num_variables: usize, clauses: &[Vec<i32>], model: &mut HashSet<i32>) -> bool {
   for clause in clauses.iter() {
     if exists_constant_false_clause(&model, &clause) {
       return false;
@@ -44,14 +58,12 @@ fn solve_impl(
     return true;
   }
 
-  assert!(!unassigned_variables.is_empty());
-  let variable = unassigned_variables.iter().nth(0).unwrap().clone();
-  unassigned_variables.remove(&variable);
+  let variable = select_variable(num_variables, &model);
 
   for sign in [-1, 1] {
     model.insert(sign * variable);
 
-    let result = solve_impl(num_variables, clauses, model, unassigned_variables);
+    let result = solve_recursive(num_variables, clauses, model);
 
     if result {
       return true;
@@ -60,12 +72,10 @@ fn solve_impl(
     model.remove(&(sign * variable));
   }
 
-  unassigned_variables.insert(variable);
-
   false
 }
 
-fn simpify(clauses: &mut Vec<Vec<i32>>, model: &mut HashSet<i32>) -> bool {
+fn simplify(clauses: &mut Vec<Vec<i32>>, model: &mut HashSet<i32>) -> bool {
   loop {
     let model_size = model.len();
 
@@ -78,35 +88,26 @@ fn simpify(clauses: &mut Vec<Vec<i32>>, model: &mut HashSet<i32>) -> bool {
       }
     }
 
-    if model_size == model.len() {
+    if model.len() == model_size {
       break;
     }
 
-    for (clause_index, clause) in clauses.iter_mut().enumerate() {
-      let mut literal_index = 0;
-      while literal_index < clause.len() {
-        if model.contains(&clause[literal_index]) {
-          clause.clear();
-          break;
+    clauses.retain(|clause| {
+      for literal in clause.iter() {
+        if model.contains(&literal) {
+          return false;
         }
-
-        if model.contains(&-clause[literal_index]) {
-          clause.remove(clause_index);
-          continue;
-        }
-
-        literal_index += 1;
       }
-    }
-  }
+      true
+    });
 
-  let mut index = 0;
-  while index < clauses.len() {
-    if clauses[index].is_empty() {
-      clauses.remove(index);
-      continue;
+    clauses
+      .iter_mut()
+      .for_each(|clause| clause.retain(|literal| !model.contains(&-literal)));
+
+    if clauses.iter().any(|clause| clause.is_empty()) {
+      return false;
     }
-    index += 1;
   }
 
   true
@@ -124,4 +125,40 @@ fn exists_constant_false_clause(model: &HashSet<i32>, clause: &[i32]) -> bool {
   }
 
   true
+}
+
+fn exists_constant_false_clauses(model: &HashSet<i32>, clauses: &[Vec<i32>]) -> bool {
+  for clause in clauses.iter() {
+    if exists_constant_false_clause(&model, &clause) {
+      return true;
+    }
+  }
+  false
+}
+
+fn select_variable(num_variables: usize, model: &HashSet<i32>) -> i32 {
+  for n in 1..=num_variables as i32 {
+    if !model.contains(&n) && !model.contains(&-n) {
+      return n;
+    }
+  }
+  unreachable!()
+}
+
+#[test]
+fn test_simplify1() {
+  let mut model = HashSet::new();
+  let mut clauses = vec![vec![1], vec![1, 2]];
+  let result = simplify(&mut clauses, &mut model);
+  assert!(result);
+  assert!(clauses.is_empty());
+  assert!(model.contains(&1));
+  assert!(model.contains(&2) && model.contains(&-2));
+}
+
+#[test]
+fn test_simplify2() {
+  let mut clauses = vec![vec![1], vec![-1]];
+  let res = simplify(&mut clauses, &mut HashSet::new());
+  assert!(!res);
 }

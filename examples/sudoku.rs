@@ -1,4 +1,9 @@
-use std::{env, error::Error, fmt::Display, path::Path, usize};
+use std::{
+  env,
+  error::Error,
+  fmt::Display,
+  path::{Path, PathBuf},
+};
 
 use rewsat::{sat_solver, utilities};
 
@@ -12,10 +17,23 @@ fn main() {
     return;
   }
 
-  let sudoku_file = args[1].clone();
-  println!("sudoku file: {}", sudoku_file);
+  let sudoku_file = match PathBuf::from(&args[1]).canonicalize() {
+    Ok(res) => res,
+    Err(e) => {
+      eprintln!("Error: {}", e);
+      return;
+    }
+  };
 
-  let problem = parse_sudoku(&sudoku_file).unwrap();
+  println!("sudoku file: {}", sudoku_file.to_string_lossy());
+
+  let problem = match parse_sudoku(&sudoku_file) {
+    Ok(res) => res,
+    Err(e) => {
+      eprintln!("Error: {}", e);
+      return;
+    }
+  };
 
   println!("problem:");
   print_sudoku(&problem);
@@ -47,11 +65,6 @@ fn solve_sudoku(problem: &[Vec<u8>]) -> Option<Vec<Vec<u8>>> {
 
     // At Least One
     // x1 || x2 || ... || x9
-    //   let mut clause: Vec<&Variable> = vec![];
-    //   for variable in variables.iter() {
-    //     clause.push(variable);
-    //   }
-    //   solver.add_clause(&clause);
     solver.add_clause(&variables.iter().collect::<Vec<&Variable>>());
   }
 
