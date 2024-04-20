@@ -3,11 +3,21 @@ use std::collections::HashSet;
 #[derive(Debug)]
 pub struct DPLL;
 
-type Clause = Vec<i32>;
-type Model = HashSet<i32>;
+pub type Clause = Vec<i32>;
+pub type Model = HashSet<i32>;
 
 impl DPLL {
-  pub fn solve(num_variables: usize, clauses: &[Clause]) -> Option<Model> {
+  pub fn solve(clauses: &[Clause]) -> Option<Model> {
+    let num_variables = clauses
+      .iter()
+      .fold(HashSet::new(), |variables, clause| {
+        variables
+          .into_iter()
+          .chain(clause.iter().map(|literal| literal.abs()))
+          .collect()
+      })
+      .len();
+
     solve_impl(num_variables, &clauses, &Model::new())
   }
 }
@@ -23,7 +33,7 @@ fn solve_impl(num_variables: usize, clauses: &[Clause], model: &Model) -> Option
     return Some(model.clone());
   }
 
-  let variable = select_variable(num_variables, &model);
+  let variable = select_variable(num_variables, &model).unwrap();
 
   for sign in [-1, 1] {
     let mut clauses = clauses.clone();
@@ -43,17 +53,15 @@ fn simplify(clauses: &[Clause], model: &Model) -> (Vec<Clause>, Model) {
   let mut model = model.clone();
 
   while !has_empty_clause(&clauses) {
-    let model_size = model.len();
+    let previous_model_size = model.len();
 
     for clause in clauses.iter() {
-      if clause.len() == 1 {
-        if !model.contains(&-clause[0]) {
-          model.insert(clause[0]);
-        }
+      if clause.len() == 1 && !model.contains(&-clause[0]) {
+        model.insert(clause[0]);
       }
     }
 
-    if model.len() == model_size {
+    if model.len() == previous_model_size {
       break;
     }
 
@@ -74,13 +82,8 @@ fn simplify(clauses: &[Clause], model: &Model) -> (Vec<Clause>, Model) {
   (clauses, model)
 }
 
-fn select_variable(num_variables: usize, model: &Model) -> i32 {
-  for n in 1..=num_variables as i32 {
-    if !model.contains(&n) && !model.contains(&-n) {
-      return n;
-    }
-  }
-  unreachable!()
+fn select_variable(num_variables: usize, model: &Model) -> Option<i32> {
+  (1..=num_variables as i32).find(|n| !model.contains(&n) && !model.contains(&-n))
 }
 
 fn has_empty_clause(clauses: &[Clause]) -> bool {

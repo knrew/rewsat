@@ -5,12 +5,13 @@ use crate::{utilities, SATSolverCore};
 pub fn solve_dimacs<P: AsRef<Path>>(
   dimacs_file: P,
 ) -> Result<Option<HashSet<i32>>, Box<dyn Error>> {
-  let (num_variables, clauses) = parse_dimacs(dimacs_file)?;
-  Ok(SATSolverCore::solve(num_variables, &clauses))
+  Ok(SATSolverCore::solve(&parse_dimacs(dimacs_file)?.2))
 }
 
-// return: (num_variables, clauses)
-fn parse_dimacs<P: AsRef<Path>>(dimacs_file: P) -> Result<(usize, Vec<Vec<i32>>), Box<dyn Error>> {
+// return: (num_variables,num_clauses,  clauses)
+fn parse_dimacs<P: AsRef<Path>>(
+  dimacs_file: P,
+) -> Result<(usize, usize, Vec<Vec<i32>>), Box<dyn Error>> {
   let mut has_set_num_variables = false;
   let mut num_variables = 0;
   let mut num_clauses = 0;
@@ -64,7 +65,7 @@ fn parse_dimacs<P: AsRef<Path>>(dimacs_file: P) -> Result<(usize, Vec<Vec<i32>>)
     return Err(Box::new(DimacsParseError));
   }
 
-  Ok((num_variables, clauses))
+  Ok((num_variables, num_clauses, clauses))
 }
 
 #[derive(Clone, Debug)]

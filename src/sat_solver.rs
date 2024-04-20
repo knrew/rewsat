@@ -59,7 +59,7 @@ impl<TName: Clone + Eq + Hash> SATSolver<TName> {
   }
 
   pub fn solve(&self) -> Option<HashMap<TName, bool>> {
-    match SATSolverCore::solve(self.num_variables, &self.clauses) {
+    match SATSolverCore::solve(&self.clauses) {
       Some(res) => Some(
         res
           .iter()

@@ -8,7 +8,7 @@ use std::{
 use rewsat::{sat_solver, utilities};
 
 fn main() -> Result<(), Box<dyn Error>> {
-  println!("dimacs solver.");
+  println!("sudoku solver.");
 
   let args: Vec<String> = env::args().collect();
 
@@ -27,9 +27,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   println!("solving...");
   match solve_sudoku(&problem) {
-    Some(res) => {
+    Some(answer) => {
       println!("SOLVED");
-      print_sudoku(&res);
+      print_sudoku(&answer);
     }
     None => println!("UNSOLVABLE"),
   }
@@ -145,17 +145,17 @@ fn solve_sudoku(problem: &[Vec<u8>]) -> Option<Vec<Vec<u8>>> {
     None => return None,
   };
 
-  let mut answer = Vec::from(problem);
-
-  for n in 1..=sudoku_size {
-    for r in 0..sudoku_size {
-      for c in 0..sudoku_size {
-        if *model.get(&(r, c, n)).unwrap() {
-          answer[r as usize][c as usize] = n;
-        }
-      }
-    }
-  }
+  let answer = (0..sudoku_size)
+    .map(|r| {
+      (0..sudoku_size)
+        .map(|c| {
+          (1..=sudoku_size)
+            .find(|n| *model.get(&(r, c, *n)).unwrap())
+            .unwrap()
+        })
+        .collect()
+    })
+    .collect();
 
   Some(answer)
 }
