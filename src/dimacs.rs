@@ -1,12 +1,12 @@
 use std::{collections::HashSet, error::Error, fmt, path::Path};
 
-use crate::{sat_solver_core, utilities};
+use crate::{utilities, SATSolverCore};
 
 pub fn solve_dimacs<P: AsRef<Path>>(
   dimacs_file: P,
 ) -> Result<Option<HashSet<i32>>, Box<dyn Error>> {
   let (num_variables, clauses) = parse_dimacs(dimacs_file)?;
-  Ok(sat_solver_core::solve(num_variables, &clauses))
+  Ok(SATSolverCore::solve(num_variables, &clauses))
 }
 
 // return: (num_variables, clauses)
@@ -17,8 +17,8 @@ fn parse_dimacs<P: AsRef<Path>>(dimacs_file: P) -> Result<(usize, Vec<Vec<i32>>)
   let mut clauses = vec![];
 
   let lines = utilities::read_file(dimacs_file)?;
-  
-    for line in lines.iter() {
+
+  for line in lines.iter() {
     let words = line
       .split_whitespace()
       .map(|s| s.trim())

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hash::Hash};
 
-use crate::sat_solver_core;
+use crate::SATSolverCore;
 
 #[derive(Clone, Debug)]
 pub struct Variable<TName> {
@@ -59,7 +59,7 @@ impl<TName: Clone + Eq + Hash> SATSolver<TName> {
   }
 
   pub fn solve(&self) -> Option<HashMap<TName, bool>> {
-    match sat_solver_core::solve(self.num_variables, &self.clauses) {
+    match SATSolverCore::solve(self.num_variables, &self.clauses) {
       Some(res) => Some(
         res
           .iter()
