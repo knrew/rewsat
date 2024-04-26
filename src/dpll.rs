@@ -8,42 +8,74 @@ pub type Model = HashSet<Variable>;
 pub struct DPLL;
 
 impl DPLL {
-  pub fn solve(clauses: &[Clause]) -> Option<Model> {
-    if clauses
+  pub fn solve(num_variables: usize, clauses: &[Clause]) -> Option<Model> {
+    assert!(!clauses
       .iter()
-      .any(|clause| clause.iter().any(|literal| *literal == 0))
-    {
-      return None;
+      .any(|clause| clause.iter().any(|literal| *literal == 0)));
+
+    match solve_recursive(num_variables, &clauses, &Model::new()) {
+      // match solve_norecursive(num_variables, &clauses, &Model::new()) {
+      Some(mut model) => {
+        (1..=num_variables as Variable).for_each(|v| {
+          if !model.contains(&-v) {
+            model.insert(v);
+          }
+        });
+        Some(model)
+      }
+      None => None,
     }
-
-    let num_variables = clauses
-      .iter()
-      .map(|clause| clause.iter().map(|l| l.abs()).max().unwrap())
-      .max()
-      .unwrap() as usize;
-
-    solve_impl(num_variables, &clauses, &Model::new())
   }
 }
 
-fn solve_impl(num_variables: usize, clauses: &[Clause], model: &Model) -> Option<Model> {
+#[allow(dead_code)]
+fn solve_norecursive(_num_variables: usize, clauses: &[Clause], model: &Model) -> Option<Model> {
+  let mut stack = vec![(Vec::from(clauses), model.clone())];
+
+  while !stack.is_empty() {
+    let (clauses, model) = stack.pop().unwrap();
+
+    let (clauses, model) = simplify(&clauses, &model);
+
+    if has_empty_clause(&clauses) {
+      continue;
+    }
+
+    if clauses.is_empty() {
+      return Some(model);
+    }
+
+    let variable = select_variable(&clauses);
+
+    for sign in [-1, 1] {
+      let mut model = model.clone();
+      model.insert(sign * variable);
+      stack.push((clauses.clone(), model));
+    }
+  }
+
+  None
+}
+
+#[allow(dead_code)]
+fn solve_recursive(num_variables: usize, clauses: &[Clause], model: &Model) -> Option<Model> {
   let (clauses, model) = simplify(&clauses, &model);
 
   if has_empty_clause(&clauses) {
     return None;
   }
 
-  if clauses.is_empty() && model.len() == num_variables {
+  if clauses.is_empty() {
     return Some(model);
   }
 
-  let variable = select_variable(num_variables, &clauses, &model).unwrap();
+  let variable = select_variable(&clauses);
 
   for sign in [-1, 1] {
     let mut model = model.clone();
     model.insert(sign * variable);
 
-    if let Some(m) = solve_impl(num_variables, &clauses, &model) {
+    if let Some(m) = solve_recursive(num_variables, &clauses, &model) {
       return Some(m);
     }
   }
@@ -81,12 +113,9 @@ fn simplify(clauses: &[Clause], model: &Model) -> (Vec<Clause>, Model) {
   (clauses, model)
 }
 
-fn select_variable(num_variables: usize, clauses: &[Clause], model: &Model) -> Option<Variable> {
-  if clauses.is_empty() || clauses[0].is_empty() {
-    (1..=num_variables as Variable).find(|n| !model.contains(&n) && !model.contains(&-n))
-  } else {
-    Some(clauses[0][0].abs())
-  }
+fn select_variable(clauses: &[Clause]) -> Variable {
+  assert!(!clauses.is_empty() && !clauses[0].is_empty());
+  clauses[0][0].abs()
 }
 
 fn has_empty_clause(clauses: &[Clause]) -> bool {

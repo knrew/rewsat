@@ -3,8 +3,8 @@ use std::{error::Error, fmt, path::Path};
 use crate::{dpll, utilities};
 
 pub fn solve_dimacs<P: AsRef<Path>>(dimacs_file: P) -> Result<Option<dpll::Model>, Box<dyn Error>> {
-  let (_, _, clauses) = parse_dimacs(dimacs_file)?;
-  Ok(dpll::DPLL::solve(&clauses))
+  let (num_variables, _, clauses) = parse_dimacs(dimacs_file)?;
+  Ok(dpll::DPLL::solve(num_variables, &clauses))
 }
 
 // return: (num_variables, num_clauses,  clauses)

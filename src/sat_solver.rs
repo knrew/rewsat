@@ -61,9 +61,9 @@ impl<TName: Clone + Eq + Hash> SATSolver<TName> {
   }
 
   pub fn solve(&self) -> Option<HashMap<TName, bool>> {
-    match dpll::DPLL::solve(&self.clauses) {
-      Some(res) => Some(
-        res
+    match dpll::DPLL::solve(self.num_variables, &self.clauses) {
+      Some(model) => Some(
+        model
           .iter()
           .map(|e| (self.id_to_name.get(&e.abs()).unwrap().to_owned(), *e > 0))
           .collect(),
