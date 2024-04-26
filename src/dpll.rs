@@ -15,14 +15,11 @@ impl DPLL {
 
     match solve_recursive(num_variables, &clauses, &Model::new()) {
       // match solve_norecursive(num_variables, &clauses, &Model::new()) {
-      Some(mut model) => {
-        (1..=num_variables as Variable).for_each(|v| {
-          if !model.contains(&-v) {
-            model.insert(v);
-          }
-        });
-        Some(model)
-      }
+      Some(model) => Some(
+        (1..=num_variables as Variable)
+          .map(|n| if model.contains(&-n) { -n } else { n })
+          .collect(),
+      ),
       None => None,
     }
   }
