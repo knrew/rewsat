@@ -18,10 +18,9 @@ impl DPLL {
 
     let num_variables = clauses
       .iter()
-      .map(|clause| clause.iter().max_by(|a, b| a.abs().cmp(&b.abs())).unwrap())
+      .map(|clause| clause.iter().map(|l| l.abs()).max().unwrap())
       .max()
-      .unwrap()
-      .to_owned() as usize;
+      .unwrap() as usize;
 
     solve_impl(num_variables, &clauses, &Model::new())
   }
@@ -35,14 +34,14 @@ fn solve_impl(num_variables: usize, clauses: &[Clause], model: &Model) -> Option
   }
 
   if clauses.is_empty() && model.len() == num_variables {
-    return Some(model.clone());
+    return Some(model);
   }
 
-  let variable = select_variable(num_variables, &model).unwrap();
+  let variable = select_variable(num_variables, &clauses, &model).unwrap();
 
   for sign in [-1, 1] {
-    let mut clauses = clauses.clone();
-    clauses.push(vec![sign * variable]);
+    let mut model = model.clone();
+    model.insert(sign * variable);
 
     if let Some(m) = solve_impl(num_variables, &clauses, &model) {
       return Some(m);
@@ -66,22 +65,28 @@ fn simplify(clauses: &[Clause], model: &Model) -> (Vec<Clause>, Model) {
       }
     }
 
-    if model.len() == previous_model_size {
-      break;
-    }
-
     clauses.retain(|clause| !clause.iter().any(|literal| model.contains(&literal)));
 
     clauses
       .iter_mut()
       .for_each(|clause| clause.retain(|literal| !model.contains(&-literal)));
+
+    if model.len() == previous_model_size {
+      break;
+    }
   }
+
+  // clauses.sort_by(|a, b| a.len().cmp(&b.len()));
 
   (clauses, model)
 }
 
-fn select_variable(num_variables: usize, model: &Model) -> Option<Variable> {
-  (1..=num_variables as Variable).find(|n| !model.contains(&n) && !model.contains(&-n))
+fn select_variable(num_variables: usize, clauses: &[Clause], model: &Model) -> Option<Variable> {
+  if clauses.is_empty() || clauses[0].is_empty() {
+    (1..=num_variables as Variable).find(|n| !model.contains(&n) && !model.contains(&-n))
+  } else {
+    Some(clauses[0][0].abs())
+  }
 }
 
 fn has_empty_clause(clauses: &[Clause]) -> bool {

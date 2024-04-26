@@ -96,7 +96,7 @@ impl<TName: Clone + Eq + Hash> SATSolver<TName> {
     let clause = clause
       .iter()
       .map(|literal| {
-        (if literal.sign { 1 } else { -1 }) * self.name_to_id.get(&literal.name).unwrap().to_owned()
+        (if literal.sign { 1 } else { -1 }) * *self.name_to_id.get(&literal.name).unwrap()
       })
       .collect();
 
