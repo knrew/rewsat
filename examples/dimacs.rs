@@ -3,17 +3,16 @@ use std::{env, error::Error, fmt, path::PathBuf};
 use rewsat::dimacs::solve_dimacs;
 
 fn main() -> Result<(), Box<dyn Error>> {
-  println!("dimacs solver.");
+  // println!("dimacs solver.");
 
-  let args: Vec<String> = env::args().collect();
+  let args: Vec<_> = env::args().collect();
 
   if args.len() < 2 {
     return Err(Box::new(NotEnoughArgumentsError));
   }
 
   let dimacs_file = PathBuf::from(&args[1]).canonicalize()?;
-
-  println!("dimacs file: {}", dimacs_file.to_string_lossy());
+  // println!("dimacs file: {}", dimacs_file.to_string_lossy());
 
   match solve_dimacs(&dimacs_file)? {
     Some(model) => {
@@ -21,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
       let mut model = Vec::from_iter(model.iter());
       model.sort_by(|a, b| a.abs().cmp(&b.abs()));
       model.iter().for_each(|l| print!("{} ", l));
-      println!("");
+      println!("0");
     }
     None => println!("UNSAT"),
   }

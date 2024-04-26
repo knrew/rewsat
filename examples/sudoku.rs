@@ -5,23 +5,21 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use rewsat::{sat_solver, utilities};
+use rewsat::sat_solver;
 
 fn main() -> Result<(), Box<dyn Error>> {
   println!("sudoku solver.");
 
-  let args: Vec<String> = env::args().collect();
+  let args: Vec<_> = env::args().collect();
 
   if args.len() < 2 {
     return Err(Box::new(NotEnoughArgumentsError));
   }
 
   let sudoku_file = PathBuf::from(&args[1]).canonicalize()?;
-
   println!("sudoku file: {}", sudoku_file.to_string_lossy());
 
   let problem = parse_sudoku(&sudoku_file)?;
-
   println!("problem:");
   print_sudoku(&problem);
 
@@ -37,8 +35,10 @@ fn main() -> Result<(), Box<dyn Error>> {
   Ok(())
 }
 
+type Sudoku = Vec<Vec<u8>>;
+
 // 4x4 or 9x9
-fn solve_sudoku(problem: &[Vec<u8>]) -> Option<Vec<Vec<u8>>> {
+fn solve_sudoku(problem: &Sudoku) -> Option<Sudoku> {
   assert!(problem.len() == 4 || problem.len() == 9);
 
   type SATSolver = sat_solver::SATSolver<(u8, u8, u8)>;
@@ -75,7 +75,7 @@ fn solve_sudoku(problem: &[Vec<u8>]) -> Option<Vec<Vec<u8>>> {
   // 制約「各マスには数字1-9のいずれかが入る」を追加
   for r in 0..sudoku_size {
     for c in 0..sudoku_size {
-      let variables: Vec<Variable> = (1..=sudoku_size)
+      let variables: Vec<_> = (1..=sudoku_size)
         .map(|n| Variable::new(&(r, c, n)))
         .collect();
       add_only_one_constraints(&mut solver, &variables);
@@ -85,7 +85,7 @@ fn solve_sudoku(problem: &[Vec<u8>]) -> Option<Vec<Vec<u8>>> {
   // 制約「各行には1-9が1個ずつ入る」を追加
   for n in 1..=sudoku_size {
     for r in 0..sudoku_size {
-      let variables: Vec<Variable> = (0..sudoku_size)
+      let variables: Vec<_> = (0..sudoku_size)
         .map(|c| Variable::new(&(r, c, n)))
         .collect();
       add_only_one_constraints(&mut solver, &variables);
@@ -95,7 +95,7 @@ fn solve_sudoku(problem: &[Vec<u8>]) -> Option<Vec<Vec<u8>>> {
   // 制約「各列には1-9が1個ずつ入る」を追加
   for n in 1..=sudoku_size {
     for c in 0..sudoku_size {
-      let variables: Vec<Variable> = (0..sudoku_size)
+      let variables: Vec<_> = (0..sudoku_size)
         .map(|r| Variable::new(&(r, c, n)))
         .collect();
       add_only_one_constraints(&mut solver, &variables);
@@ -160,7 +160,9 @@ fn solve_sudoku(problem: &[Vec<u8>]) -> Option<Vec<Vec<u8>>> {
   Some(answer)
 }
 
-fn parse_sudoku<P: AsRef<Path>>(sudoku_file: P) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
+fn parse_sudoku<P: AsRef<Path>>(sudoku_file: P) -> Result<Sudoku, Box<dyn Error>> {
+  use rewsat::utilities;
+
   let lines = utilities::read_file(sudoku_file)?;
 
   let sudoku_size = lines.len();
@@ -187,7 +189,7 @@ fn parse_sudoku<P: AsRef<Path>>(sudoku_file: P) -> Result<Vec<Vec<u8>>, Box<dyn 
   Ok(sudoku)
 }
 
-fn print_sudoku<T: fmt::Display>(sudoku: &[Vec<T>]) {
+fn print_sudoku(sudoku: &Sudoku) {
   sudoku.iter().for_each(|line| {
     line.iter().for_each(|n| print!("{}", n));
     println!("");

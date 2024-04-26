@@ -22,6 +22,8 @@ fn main() -> Result<(), Box<dyn Error>> {
   solver.add_clause(&[&c.not(), &e]);
   solver.add_clause(&[&c, &d]);
 
+  println!("(a || !b) && (a || c || !d) && (!c || !e) && (!c || e) && (c || d)");
+
   match solver.solve() {
     Some(model) => {
       println!("SAT");

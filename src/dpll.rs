@@ -1,22 +1,27 @@
 use std::collections::HashSet;
 
+pub type Variable = i32;
+pub type Clause = Vec<Variable>;
+pub type Model = HashSet<Variable>;
+
 #[derive(Debug)]
 pub struct DPLL;
 
-pub type Clause = Vec<i32>;
-pub type Model = HashSet<i32>;
-
 impl DPLL {
   pub fn solve(clauses: &[Clause]) -> Option<Model> {
+    if clauses
+      .iter()
+      .any(|clause| clause.iter().any(|literal| *literal == 0))
+    {
+      return None;
+    }
+
     let num_variables = clauses
       .iter()
-      .fold(HashSet::new(), |variables, clause| {
-        variables
-          .into_iter()
-          .chain(clause.iter().map(|literal| literal.abs()))
-          .collect()
-      })
-      .len();
+      .map(|clause| clause.iter().max_by(|a, b| a.abs().cmp(&b.abs())).unwrap())
+      .max()
+      .unwrap()
+      .to_owned() as usize;
 
     solve_impl(num_variables, &clauses, &Model::new())
   }
@@ -38,9 +43,9 @@ fn solve_impl(num_variables: usize, clauses: &[Clause], model: &Model) -> Option
   for sign in [-1, 1] {
     let mut clauses = clauses.clone();
     clauses.push(vec![sign * variable]);
-    match solve_impl(num_variables, &clauses, &model) {
-      Some(m) => return Some(m),
-      None => {}
+
+    if let Some(m) = solve_impl(num_variables, &clauses, &model) {
+      return Some(m);
     }
   }
 
@@ -65,14 +70,7 @@ fn simplify(clauses: &[Clause], model: &Model) -> (Vec<Clause>, Model) {
       break;
     }
 
-    clauses.retain(|clause| {
-      for literal in clause.iter() {
-        if model.contains(&literal) {
-          return false;
-        }
-      }
-      true
-    });
+    clauses.retain(|clause| !clause.iter().any(|literal| model.contains(&literal)));
 
     clauses
       .iter_mut()
@@ -82,8 +80,8 @@ fn simplify(clauses: &[Clause], model: &Model) -> (Vec<Clause>, Model) {
   (clauses, model)
 }
 
-fn select_variable(num_variables: usize, model: &Model) -> Option<i32> {
-  (1..=num_variables as i32).find(|n| !model.contains(&n) && !model.contains(&-n))
+fn select_variable(num_variables: usize, model: &Model) -> Option<Variable> {
+  (1..=num_variables as Variable).find(|n| !model.contains(&n) && !model.contains(&-n))
 }
 
 fn has_empty_clause(clauses: &[Clause]) -> bool {

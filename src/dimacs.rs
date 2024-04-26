@@ -1,18 +1,17 @@
-use std::{collections::HashSet, error::Error, fmt, path::Path};
+use std::{error::Error, fmt, path::Path};
 
-use crate::{utilities, SATSolverCore};
+use crate::{dpll, utilities};
 
-pub fn solve_dimacs<P: AsRef<Path>>(
-  dimacs_file: P,
-) -> Result<Option<HashSet<i32>>, Box<dyn Error>> {
-  Ok(SATSolverCore::solve(&parse_dimacs(dimacs_file)?.2))
+pub fn solve_dimacs<P: AsRef<Path>>(dimacs_file: P) -> Result<Option<dpll::Model>, Box<dyn Error>> {
+  let (_, _, clauses) = parse_dimacs(dimacs_file)?;
+  Ok(dpll::DPLL::solve(&clauses))
 }
 
-// return: (num_variables,num_clauses,  clauses)
+// return: (num_variables, num_clauses,  clauses)
 fn parse_dimacs<P: AsRef<Path>>(
   dimacs_file: P,
-) -> Result<(usize, usize, Vec<Vec<i32>>), Box<dyn Error>> {
-  let mut has_set_num_variables = false;
+) -> Result<(usize, usize, Vec<dpll::Clause>), Box<dyn Error>> {
+  let mut has_read_header = false;
   let mut num_variables = 0;
   let mut num_clauses = 0;
   let mut clauses = vec![];
@@ -20,13 +19,13 @@ fn parse_dimacs<P: AsRef<Path>>(
   let lines = utilities::read_file(dimacs_file)?;
 
   for line in lines.iter() {
-    let words = line
+    let words: Vec<_> = line
       .split_whitespace()
       .map(|s| s.trim())
       .filter(|s| !s.is_empty())
-      .collect::<Vec<_>>();
+      .collect();
 
-    if has_set_num_variables {
+    if has_read_header {
       if words[words.len() - 1] != "0" {
         return Err(Box::new(DimacsParseError));
       }
@@ -47,21 +46,21 @@ fn parse_dimacs<P: AsRef<Path>>(
 
       clauses.push(clause);
     } else {
-      if words[0] == "c" {
+      if words[0].chars().nth(0).unwrap() == 'c' {
         continue;
       }
 
       if words.len() == 4 && words[0] == "p" && words[1] == "cnf" {
         num_variables = words[2].parse()?;
-
         num_clauses = words[3].parse()?;
-
-        has_set_num_variables = true;
+        has_read_header = true;
+      } else {
+        return Err(Box::new(DimacsParseError));
       }
     }
   }
 
-  if num_clauses != clauses.len() {
+  if !has_read_header || num_clauses != clauses.len() {
     return Err(Box::new(DimacsParseError));
   }
 
