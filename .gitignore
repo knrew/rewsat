@@ -1,1 +1,5 @@
 /target
+/dimacs/*
+!/dimacs/dimacs1.txt
+/sudoku/*
+!/sudoku/sudoku1.txt
