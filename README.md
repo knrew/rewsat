@@ -2,12 +2,13 @@
 rewsat is SAT solver
 
 # example
-## dimacs
+## dimacs solver
 ```sh
-cargo run --example dimacs -- dimacs/dimacs1.txt
+cargo run --release --example dimacs -- examples/dimacs/dimacs1.txt
+
 ```
 
-## sudoku
+## sudoku solver
 ```sh
-cargo run --example sudoku -- sudoku/sudoku1.txt
+cargo run --release --example sudoku -- examples/sudoku/sudoku1.txt
 ```

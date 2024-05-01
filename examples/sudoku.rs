@@ -8,7 +8,7 @@ use std::{
 use rewsat::sat_solver;
 
 fn main() -> Result<(), Box<dyn Error>> {
-  println!("sudoku solver.");
+  println!("sudoku solver");
 
   let args: Vec<_> = env::args().collect();
 
@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   match solve_sudoku(&problem) {
     Some(answer) => {
       println!("SOLVED");
+      println!("answer:");
       print_sudoku(&answer);
     }
     None => println!("UNSOLVABLE"),
