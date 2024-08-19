@@ -1,38 +1,33 @@
-use std::error::Error;
+use rewsat::*;
 
-use rewsat::sat_solver::{SATSolver, Variable};
-
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
   let mut solver = SATSolver::new();
-
-  let a = Variable::new(&"a");
-  let b = Variable::new(&"b");
-  let c = Variable::new(&"c");
-  let d = Variable::new(&"d");
-  let e = Variable::new(&"e");
-
+  let a = solver.variable("a");
+  let b = solver.variable("b");
+  let c = solver.variable("c");
+  let d = solver.variable("d");
+  let e = solver.variable("e");
   let variables = [&a, &b, &c, &d, &e];
 
-  variables.iter().for_each(|v| solver.add_variable(v));
-
   // (a || !b) && (a || c || !d) && (!c || !e) && (!c || e) && (c || d)
-  solver.add_clause(&[&a, &b.not()]);
-  solver.add_clause(&[&a, &c, &d.not()]);
-  solver.add_clause(&[&c.not(), &e.not()]);
-  solver.add_clause(&[&c.not(), &e]);
-  solver.add_clause(&[&c, &d]);
+  solver.add_clause(&[a, !b]);
+  solver.add_clause(&[a, c, !d]);
+  solver.add_clause(&[!c, !e]);
+  solver.add_clause(&[!c, e]);
+  solver.add_clause(&[c, d]);
 
   println!("(a || !b) && (a || c || !d) && (!c || !e) && (!c || e) && (c || d)");
 
-  match solver.solve() {
-    Some(model) => {
-      println!("SAT");
-      variables
-        .iter()
-        .for_each(|v| println!("{}: {}", v.name(), model.get(v.name()).unwrap()));
+  if solver.solve() {
+    println!("SAT");
+    for v in &variables {
+      println!(
+        "{}: {}",
+        solver.get_variable_name(v),
+        solver.get_model_value(&v).unwrap()
+      );
     }
-    None => println!("UNSAT"),
+  } else {
+    println!("UNSAT");
   }
-
-  Ok(())
 }

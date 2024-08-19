@@ -1,4 +1,6 @@
 pub mod dimacs;
 mod dpll;
-pub mod sat_solver;
+mod sat_solver;
 pub mod utilities;
+
+pub use sat_solver::*;

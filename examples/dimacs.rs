@@ -1,11 +1,11 @@
 use std::{env, error::Error, fmt, path::PathBuf};
 
-use rewsat::dimacs::solve_dimacs;
+use rewsat::{self, dimacs};
 
 fn main() -> Result<(), Box<dyn Error>> {
   // println!("dimacs solver.");
 
-  let args: Vec<_> = env::args().collect();
+  let args = env::args().collect::<Vec<_>>();
 
   if args.len() < 2 {
     return Err(Box::new(NotEnoughArgumentsError));
@@ -14,15 +14,14 @@ fn main() -> Result<(), Box<dyn Error>> {
   let dimacs_file = PathBuf::from(&args[1]).canonicalize()?;
   // println!("dimacs file: {}", dimacs_file.to_string_lossy());
 
-  match solve_dimacs(&dimacs_file)? {
-    Some(model) => {
-      println!("SAT");
-      let mut model = Vec::from_iter(model.iter());
-      model.sort_by(|a, b| a.abs().cmp(&b.abs()));
-      model.iter().for_each(|l| print!("{} ", l));
-      println!("0");
-    }
-    None => println!("UNSAT"),
+  let mut dimacs = dimacs::DIMACS::from(dimacs_file)?;
+
+  if let Some(solution) = dimacs.solve() {
+    println!("SAT");
+    solution.iter().for_each(|e| print!("{} ", e));
+    println!("");
+  } else {
+    println!("UNSAT");
   }
 
   Ok(())

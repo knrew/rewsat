@@ -1,105 +1,97 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, ops::Not};
 
 use crate::dpll;
 
-#[derive(Clone, Debug)]
-pub struct Variable<TName> {
-  name: TName,
+#[derive(Clone, Copy)]
+pub struct Variable {
+  id: usize,
   sign: bool,
 }
 
-impl<TName> Variable<TName> {
-  pub fn name(&self) -> &TName {
-    &self.name
-  }
-
-  pub fn sign(&self) -> bool {
-    self.sign
-  }
-}
-
-impl<TName: Clone> Variable<TName> {
-  pub fn new(name: &TName) -> Self {
+impl Not for Variable {
+  type Output = Self;
+  fn not(self) -> Self::Output {
     Self {
-      name: name.to_owned(),
-      sign: true,
-    }
-  }
-
-  pub fn not(&self) -> Self {
-    Self {
-      name: self.name.to_owned(),
+      id: self.id,
       sign: !self.sign,
     }
   }
 }
 
-impl From<&str> for Variable<String> {
-  fn from(name: &str) -> Self {
-    Self {
-      name: String::from(name),
-      sign: true,
-    }
-  }
-}
-
-pub struct SATSolver<TName> {
+#[derive(Debug)]
+pub struct SATSolver<T> {
+  name_to_id: HashMap<T, usize>,
+  id_to_name: HashMap<usize, T>,
   num_variables: usize,
-  clauses: Vec<dpll::Clause>,
-  name_to_id: HashMap<TName, dpll::Variable>,
-  id_to_name: HashMap<dpll::Variable, TName>,
+  cnf: dpll::CNF,
+  model: HashMap<usize, bool>,
 }
 
-impl<TName: Clone + Eq + Hash> SATSolver<TName> {
+impl<T: Clone + Eq + Hash> SATSolver<T> {
   pub fn new() -> Self {
     Self {
       num_variables: 0,
-      clauses: vec![],
+      cnf: dpll::CNF::new(),
       name_to_id: HashMap::new(),
       id_to_name: HashMap::new(),
+      model: HashMap::new(),
     }
   }
 
-  pub fn solve(&self) -> Option<HashMap<TName, bool>> {
-    match dpll::DPLL::solve(self.num_variables, &self.clauses) {
-      Some(model) => Some(
-        model
-          .iter()
-          .map(|e| (self.id_to_name.get(&e.abs()).unwrap().to_owned(), *e > 0))
-          .collect(),
-      ),
-      None => None,
+  pub fn solve(&mut self) -> bool {
+    if let Some(model) = dpll::solve(self.num_variables, &self.cnf) {
+      self.model = model;
+      true
+    } else {
+      false
     }
   }
 
-  pub fn clear(&mut self) {
-    *self = Self::new();
+  pub fn get_model_value(&self, variable: &Variable) -> Option<bool> {
+    self.get_model_value_from_id(&variable.id)
   }
 
-  pub fn add_variable(&mut self, variable: &Variable<TName>) {
-    if self.name_to_id.contains_key(&variable.name) {
+  pub fn get_model_value_from_name(&self, name: &T) -> Option<bool> {
+    let id = self.name_to_id[name];
+    self.get_model_value_from_id(&id)
+  }
+
+  fn get_model_value_from_id(&self, id: &usize) -> Option<bool> {
+    if let Some(v) = self.model.get(&id) {
+      Some(*v)
+    } else {
+      None
+    }
+  }
+
+  pub fn get_variable_name(&self, variable: &Variable) -> &T {
+    &self.id_to_name[&variable.id]
+  }
+
+  pub fn variable(&mut self, name: T) -> Variable {
+    if !self.name_to_id.contains_key(&name) {
+      self.name_to_id.insert(name.clone(), self.num_variables);
+      self.id_to_name.insert(self.num_variables, name.clone());
+      self.num_variables += 1;
+    }
+
+    Variable {
+      id: self.name_to_id[&name],
+      sign: true,
+    }
+  }
+
+  pub fn add_clause(&mut self, clause: &[Variable]) {
+    if clause.is_empty() {
       return;
     }
-
-    self.num_variables += 1;
-    self.name_to_id.insert(
-      variable.name.to_owned(),
-      self.num_variables as dpll::Variable,
-    );
-    self.id_to_name.insert(
-      self.num_variables as dpll::Variable,
-      variable.name.to_owned(),
-    );
+    let clause = clause.iter().map(|v| (v.id, v.sign)).collect();
+    self.cnf.push(clause);
   }
 
-  pub fn add_clause(&mut self, clause: &[&Variable<TName>]) {
-    let clause = clause
-      .iter()
-      .map(|literal| {
-        (if literal.sign { 1 } else { -1 }) * *self.name_to_id.get(&literal.name).unwrap()
-      })
-      .collect();
-
-    self.clauses.push(clause);
+  pub fn add_clauses(&mut self, clauses: &[Vec<Variable>]) {
+    for clause in clauses {
+      self.add_clause(clause);
+    }
   }
 }

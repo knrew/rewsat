@@ -6,14 +6,10 @@ use std::{
 };
 
 pub fn read_file<P: AsRef<Path>>(file: P) -> Result<Vec<String>, Box<dyn Error>> {
-  let f = fs::File::open(file)?;
-  let reader = BufReader::new(f);
-
+  let reader = BufReader::new(fs::File::open(file)?);
   let mut result = vec![];
-
   for line in reader.lines() {
     result.push(line?.trim().to_string());
   }
-
   Ok(result)
 }
