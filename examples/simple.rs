@@ -1,4 +1,4 @@
-use rewsat::*;
+use rewsat::sat_solver::*;
 
 fn main() {
   let mut solver = SATSolver::new();
@@ -23,7 +23,7 @@ fn main() {
     for v in &variables {
       println!(
         "{}: {}",
-        solver.get_variable_name(v),
+        solver.get_variable_name(v).unwrap(),
         solver.get_model_value(&v).unwrap()
       );
     }

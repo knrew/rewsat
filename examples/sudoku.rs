@@ -5,7 +5,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use rewsat::*;
+use rewsat::{sat_solver::*, *};
 
 fn main() -> Result<(), Box<dyn Error>> {
   println!("sudoku solver");
@@ -102,20 +102,18 @@ fn solve_sudoku(problem: &Sudoku) -> Option<Sudoku> {
 
   // 制約「各ブロックには1-9が1個ずつ入る」を追加
   {
-    let block_size = if sudoku_size == 4 { 2 } else { 3 };
+    let block_size = if sudoku_size == 9 { 3 } else { 2 };
     for n in 1..=sudoku_size {
       for block_r in 0..block_size {
         for block_c in 0..block_size {
-          let mut variables = vec![];
-          for r in 0..block_size {
-            for c in 0..block_size {
-              variables.push(solver.variable((
-                block_size * block_r + r,
-                block_size * block_c + c,
-                n,
-              )));
-            }
-          }
+          let variables = (0..block_size)
+            .map(|r| {
+              (0..block_size)
+                .map(|c| solver.variable((block_size * block_r + r, block_size * block_c + c, n)))
+                .collect::<Vec<_>>()
+            })
+            .flatten()
+            .collect::<Vec<_>>();
           add_only_one_constraints(&mut solver, &variables);
         }
       }
@@ -143,23 +141,23 @@ fn solve_sudoku(problem: &Sudoku) -> Option<Sudoku> {
     return None;
   }
 
-  let mut answer = vec![vec![0u8; sudoku_size as usize]; sudoku_size as usize];
-
-  for r in 0..sudoku_size {
-    for c in 0..sudoku_size {
-      for n in 1..=sudoku_size {
-        if solver.get_model_value_from_name(&(r, c, n)).unwrap() {
-          answer[r as usize][c as usize] = n;
-        }
-      }
-    }
-  }
+  let answer = (0..sudoku_size)
+    .map(|r| {
+      (0..sudoku_size)
+        .map(|c| {
+          (1..=sudoku_size)
+            .find(|&n| solver.get_model_value_from_name(&(r, c, n)).unwrap())
+            .unwrap()
+        })
+        .collect()
+    })
+    .collect();
 
   Some(answer)
 }
 
 fn parse_sudoku<P: AsRef<Path>>(sudoku_file: P) -> Result<Sudoku, Box<dyn Error>> {
-  let lines = utilities::read_file(sudoku_file)?;
+  let lines = io::read_file(sudoku_file)?;
 
   let sudoku_size = lines.len();
 

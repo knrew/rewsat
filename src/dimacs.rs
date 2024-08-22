@@ -1,6 +1,6 @@
 use std::{error::Error, fmt, path::Path};
 
-use crate::{utilities, SATSolver};
+use crate::{io, sat_solver::SATSolver};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -27,7 +27,7 @@ impl DIMACS {
     let mut num_clauses = 0;
     let mut clauses = vec![];
 
-    for line in &utilities::read_file(dimacs_file)? {
+    for line in &io::read_file(dimacs_file)? {
       let words = line
         .split_whitespace()
         .map(|s| s.trim())
