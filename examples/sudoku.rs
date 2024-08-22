@@ -3,6 +3,7 @@ use std::{
   error::Error,
   fmt::{self},
   path::{Path, PathBuf},
+  time::Duration,
 };
 
 use rewsat::{sat_solver::*, *};
@@ -24,7 +25,10 @@ fn main() -> Result<(), Box<dyn Error>> {
   print_sudoku(&problem);
 
   println!("solving...");
-  match solve_sudoku(&problem) {
+
+  let (result, time) = solve_sudoku(&problem);
+
+  match result {
     Some(answer) => {
       println!("SOLVED");
       println!("answer:");
@@ -33,13 +37,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     None => println!("UNSOLVABLE"),
   }
 
+  println!("{:?}", time);
+
   Ok(())
 }
 
 type Sudoku = Vec<Vec<u8>>;
 
 // 4x4 or 9x9
-fn solve_sudoku(problem: &Sudoku) -> Option<Sudoku> {
+fn solve_sudoku(problem: &Sudoku) -> (Option<Sudoku>, Duration) {
   assert!(problem.len() == 4 || problem.len() == 9);
 
   // variablesのうちどれかひとつのvariableだけがtrueであるような制約を追加する
@@ -138,7 +144,7 @@ fn solve_sudoku(problem: &Sudoku) -> Option<Sudoku> {
   }
 
   if !solver.solve() {
-    return None;
+    return (None, solver.time());
   }
 
   let answer = (0..sudoku_size)
@@ -153,7 +159,7 @@ fn solve_sudoku(problem: &Sudoku) -> Option<Sudoku> {
     })
     .collect();
 
-  Some(answer)
+  (Some(answer), solver.time())
 }
 
 fn parse_sudoku<P: AsRef<Path>>(sudoku_file: P) -> Result<Sudoku, Box<dyn Error>> {

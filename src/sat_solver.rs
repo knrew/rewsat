@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash, ops::Not};
+use std::{collections::HashMap, hash::Hash, ops::Not, time::Duration};
 
 use crate::{
   dpll::DPLL,
@@ -27,6 +27,7 @@ pub struct SATSolver<T> {
   num_variables: usize,
   clauses: Vec<Clause>,
   model: Model,
+  time: Duration,
 }
 
 impl<T: Clone + Eq + Hash> SATSolver<T> {
@@ -37,17 +38,23 @@ impl<T: Clone + Eq + Hash> SATSolver<T> {
       name_to_id: HashMap::new(),
       id_to_name: HashMap::new(),
       model: Model::new(0),
+      time: Duration::default(),
     }
   }
 
   pub fn solve(&mut self) -> bool {
-    let solver = DPLL::new();
+    let mut solver = DPLL::new();
     if let Some(model) = solver.solve(self.num_variables, &self.clauses) {
       self.model = model;
+      self.time = solver.time();
       true
     } else {
       false
     }
+  }
+
+  pub fn time(&self) -> Duration {
+    self.time
   }
 
   pub fn get_model_value(&self, variable: &Variable) -> Option<bool> {
@@ -67,11 +74,7 @@ impl<T: Clone + Eq + Hash> SATSolver<T> {
   }
 
   pub fn get_variable_name(&self, variable: &Variable) -> Option<&T> {
-    if let Some(name) = self.id_to_name.get(&variable.id) {
-      Some(name)
-    } else {
-      None
-    }
+    self.id_to_name.get(&variable.id)
   }
 
   pub fn variable(&mut self, name: T) -> Variable {

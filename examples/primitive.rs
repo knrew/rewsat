@@ -20,7 +20,7 @@ fn main() {
     Clause::from(&vec![x[2], x[3]]),
   ];
 
-  let solver = DPLL::new();
+  let mut solver = DPLL::new();
 
   if let Some(model) = solver.solve(5, &clauses) {
     println!("SAT");

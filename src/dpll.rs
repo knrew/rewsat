@@ -1,15 +1,28 @@
+use std::time::{self, Duration};
+
 use crate::expressions::{clause::Clause, literal::Literal, model::Model};
 
 #[derive(Debug)]
-pub struct DPLL {}
+pub struct DPLL {
+  time: Duration,
+}
 
 impl DPLL {
   pub fn new() -> Self {
-    Self {}
+    Self {
+      time: Duration::default(),
+    }
   }
 
-  pub fn solve(&self, num_variables: usize, clauses: &[Clause]) -> Option<Model> {
-    solve_recursive(num_variables, &clauses, &Model::new(num_variables))
+  pub fn solve(&mut self, num_variables: usize, clauses: &[Clause]) -> Option<Model> {
+    let start = time::Instant::now();
+    let result = solve_recursive(num_variables, &clauses, &Model::new(num_variables));
+    self.time = time::Instant::now() - start;
+    result
+  }
+
+  pub fn time(&self) -> Duration {
+    self.time
   }
 }
 
