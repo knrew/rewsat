@@ -1,51 +1,55 @@
+use core::panic;
 use std::{
   env,
   error::Error,
   fmt::{self},
   path::{Path, PathBuf},
-  time::Duration,
 };
+
+use clap::{arg, command, value_parser};
 
 use rewsat::{sat_solver::*, *};
 
-fn main() -> Result<(), Box<dyn Error>> {
-  println!("sudoku solver");
+fn main() {
+  let matches = command!()
+    .about("sudoku solver")
+    .arg(
+      arg!([sudoku_file]  "sudoku file")
+        .value_parser(value_parser!(PathBuf))
+        .required(true),
+    )
+    .get_matches();
 
-  let args = env::args().collect::<Vec<_>>();
+  println!("sudoku solver started.");
 
-  if args.len() < 2 {
-    return Err(Box::new(NotEnoughArgumentsError));
-  }
+  let sudoku_file = matches.get_one::<PathBuf>("sudoku_file").unwrap();
+  let sudoku_file = sudoku_file
+    .canonicalize()
+    .unwrap_or_else(|_| panic!("not found: {:?}", sudoku_file));
 
-  let sudoku_file = PathBuf::from(&args[1]).canonicalize()?;
-  println!("sudoku file: {}", sudoku_file.to_string_lossy());
+  println!("sudoku file: {:?}", sudoku_file);
 
-  let problem = parse_sudoku(&sudoku_file)?;
+  let problem = parse_sudoku(&sudoku_file)
+    .unwrap_or_else(|_| panic!("failed to parse sudoku file: {:?}", sudoku_file));
+
   println!("problem:");
   print_sudoku(&problem);
 
   println!("solving...");
 
-  let (result, time) = solve_sudoku(&problem);
-
-  match result {
-    Some(answer) => {
-      println!("SOLVED");
-      println!("answer:");
-      print_sudoku(&answer);
-    }
-    None => println!("UNSOLVABLE"),
+  if let Some(answer) = solve_sudoku(&problem) {
+    println!("SOLVED");
+    println!("answer:");
+    print_sudoku(&answer);
+  } else {
+    println!("UNSOLVABLE");
   }
-
-  println!("{:?}", time);
-
-  Ok(())
 }
 
 type Sudoku = Vec<Vec<u8>>;
 
 // 4x4 or 9x9
-fn solve_sudoku(problem: &Sudoku) -> (Option<Sudoku>, Duration) {
+fn solve_sudoku(problem: &Sudoku) -> Option<Sudoku> {
   assert!(problem.len() == 4 || problem.len() == 9);
 
   // variablesのうちどれかひとつのvariableだけがtrueであるような制約を追加する
@@ -144,7 +148,7 @@ fn solve_sudoku(problem: &Sudoku) -> (Option<Sudoku>, Duration) {
   }
 
   if !solver.solve() {
-    return (None, solver.time());
+    return None;
   }
 
   let answer = (0..sudoku_size)
@@ -159,7 +163,7 @@ fn solve_sudoku(problem: &Sudoku) -> (Option<Sudoku>, Duration) {
     })
     .collect();
 
-  (Some(answer), solver.time())
+  Some(answer)
 }
 
 fn parse_sudoku<P: AsRef<Path>>(sudoku_file: P) -> Result<Sudoku, Box<dyn Error>> {
@@ -190,22 +194,11 @@ fn parse_sudoku<P: AsRef<Path>>(sudoku_file: P) -> Result<Sudoku, Box<dyn Error>
 }
 
 fn print_sudoku(sudoku: &Sudoku) {
-  sudoku.iter().for_each(|line| {
-    line.iter().for_each(|n| print!("{}", n));
+  sudoku.iter().for_each(|l| {
+    l.iter().for_each(|n| print!("{}", n));
     println!("");
   });
 }
-
-#[derive(Clone, Debug)]
-struct NotEnoughArgumentsError;
-
-impl fmt::Display for NotEnoughArgumentsError {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", self)
-  }
-}
-
-impl Error for NotEnoughArgumentsError {}
 
 #[derive(Clone, Debug)]
 struct ParseSudokuError;

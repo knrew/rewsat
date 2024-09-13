@@ -4,14 +4,14 @@ use crate::{io, sat_solver::SATSolver};
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub struct DIMACS {
+pub struct Dimacs {
   num_variables: usize,
   num_clauses: usize,
   clauses: Vec<Vec<(usize, bool)>>,
 }
 
 #[allow(dead_code)]
-impl DIMACS {
+impl Dimacs {
   pub fn new() -> Self {
     Self {
       num_variables: 0,
@@ -21,7 +21,7 @@ impl DIMACS {
   }
 
   /// parse dimacs file
-  pub fn from<P: AsRef<Path>>(dimacs_file: P) -> Result<DIMACS, Box<dyn Error>> {
+  pub fn from<P: AsRef<Path>>(dimacs_file: P) -> Result<Dimacs, Box<dyn Error>> {
     let mut has_read_header = false;
     let mut num_variables = 0;
     let mut num_clauses = 0;
@@ -78,7 +78,7 @@ impl DIMACS {
       return Err(Box::new(DimacsParseError));
     }
 
-    Ok(DIMACS {
+    Ok(Dimacs {
       num_variables,
       num_clauses,
       clauses,

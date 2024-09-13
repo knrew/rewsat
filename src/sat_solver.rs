@@ -1,7 +1,7 @@
-use std::{collections::HashMap, hash::Hash, ops::Not, time::Duration};
+use std::{collections::HashMap, hash::Hash, ops::Not};
 
 use crate::{
-  dpll::DPLL,
+  dpll::Dpll,
   expressions::{clause::Clause, literal::Literal, model::Model},
 };
 
@@ -27,7 +27,6 @@ pub struct SATSolver<T> {
   num_variables: usize,
   clauses: Vec<Clause>,
   model: Model,
-  time: Duration,
 }
 
 impl<T: Clone + Eq + Hash> SATSolver<T> {
@@ -38,23 +37,17 @@ impl<T: Clone + Eq + Hash> SATSolver<T> {
       name_to_id: HashMap::new(),
       id_to_name: HashMap::new(),
       model: Model::new(0),
-      time: Duration::default(),
     }
   }
 
   pub fn solve(&mut self) -> bool {
-    let mut solver = DPLL::new();
+    let mut solver = Dpll::new();
     if let Some(model) = solver.solve(self.num_variables, &self.clauses) {
       self.model = model;
-      self.time = solver.time();
       true
     } else {
       false
     }
-  }
-
-  pub fn time(&self) -> Duration {
-    self.time
   }
 
   pub fn get_model_value(&self, variable: &Variable) -> Option<bool> {

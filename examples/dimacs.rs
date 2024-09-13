@@ -1,20 +1,26 @@
-use std::{env, error::Error, fmt, path::PathBuf};
+use std::path::PathBuf;
 
-use rewsat::{self, dimacs};
+use clap::{arg, command, value_parser};
 
-fn main() -> Result<(), Box<dyn Error>> {
-  // println!("dimacs solver.");
+use rewsat::dimacs;
 
-  let args = env::args().collect::<Vec<_>>();
+fn main() {
+  let matches = command!()
+    .about("dimacs solver")
+    .arg(
+      arg!([dimacs_file]  "dimacs file")
+        .value_parser(value_parser!(PathBuf))
+        .required(true),
+    )
+    .get_matches();
 
-  if args.len() < 2 {
-    return Err(Box::new(NotEnoughArgumentsError));
-  }
+  let dimacs_file = matches.get_one::<PathBuf>("dimacs_file").unwrap();
+  let dimacs_file = dimacs_file
+    .canonicalize()
+    .unwrap_or_else(|_| panic!("not found: {:?}", dimacs_file));
 
-  let dimacs_file = PathBuf::from(&args[1]).canonicalize()?;
-  // println!("dimacs file: {}", dimacs_file.to_string_lossy());
-
-  let mut dimacs = dimacs::DIMACS::from(dimacs_file)?;
+  let mut dimacs = dimacs::Dimacs::from(&dimacs_file)
+    .unwrap_or_else(|_| panic!("failed to parse dimacs file: {:?}", dimacs_file));
 
   if let Some(solution) = dimacs.solve() {
     println!("SAT");
@@ -23,17 +29,4 @@ fn main() -> Result<(), Box<dyn Error>> {
   } else {
     println!("UNSAT");
   }
-
-  Ok(())
 }
-
-#[derive(Clone, Debug)]
-struct NotEnoughArgumentsError;
-
-impl fmt::Display for NotEnoughArgumentsError {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", self)
-  }
-}
-
-impl Error for NotEnoughArgumentsError {}

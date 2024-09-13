@@ -1,5 +1,5 @@
 use rewsat::{
-  dpll::DPLL,
+  dpll::Dpll,
   expressions::{clause::Clause, literal::Literal},
 };
 
@@ -20,7 +20,7 @@ fn main() {
     Clause::from(&vec![x[2], x[3]]),
   ];
 
-  let mut solver = DPLL::new();
+  let mut solver = Dpll::new();
 
   if let Some(model) = solver.solve(5, &clauses) {
     println!("SAT");
